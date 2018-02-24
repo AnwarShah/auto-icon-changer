@@ -36,6 +36,10 @@ def get_theme_choice_from_user(icon_theme_names)
   icon_theme_names[chosen-1]
 end
 
+def get_current_theme_name
+  `gsettings get org.gnome.desktop.interface icon-theme`.strip.gsub('\'','')
+end
+
 def change_icon_theme(name)
   `gsettings set org.gnome.desktop.interface icon-theme #{name}`
 end
@@ -47,10 +51,13 @@ def fetch_installed_theme_names
   theme_names.sort_by { |theme_name| theme_name.downcase }
 end
 
-def run_in_daemon_mode(period, theme_names)
-  theme_names.each do |theme_name|
+def run_in_daemon_mode(period, theme_names, current = 0)
+  loop do
+    current %= theme_names.count # rewind if last theme is reached
+    theme_name = theme_names[current]
     puts "Changing icon theme to #{theme_name} ..."
     change_icon_theme(theme_name)
+    current += 1
     sleep period*60
   end
 end
@@ -64,13 +71,17 @@ elsif ARGV.include?('-d') or ARGV.include?('--daemon')
   idx = ARGV.index('-d') || ARGV.index('--daemon') # index of daemon parameter
   period = ARGV[idx+1].to_i # if it's nil, invalid the result will be 0
 
+  installed_theme_names = fetch_installed_theme_names
+  current_index = installed_theme_names.index(get_current_theme_name)
+
   if period.zero?
     puts "Invalid or no period specified, Setting to 5 minutes ..."
     period = 5
   else
     puts "Changing icon theme per #{period} min. ..."
   end
-  run_in_daemon_mode(period, fetch_installed_theme_names)
+
+  run_in_daemon_mode(period, fetch_installed_theme_names, current_index+1)
 else
   puts "USAGE: icon_changer.rb -i (interactive mode)"
   puts " or    icon_changer -d, --daemon [period in minute] (run in daemon mode)"
