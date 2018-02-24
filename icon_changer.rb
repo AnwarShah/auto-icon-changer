@@ -47,6 +47,14 @@ def fetch_installed_theme_names
   theme_names.sort_by { |theme_name| theme_name.downcase }
 end
 
+def run_in_daemon_mode(period, theme_names)
+  theme_names.each do |theme_name|
+    puts "Changing icon theme to #{theme_name} ..."
+    change_icon_theme(theme_name)
+    sleep period*60
+  end
+end
+
 if ARGV.include?("-i")
   chosen_theme_name = get_theme_choice_from_user(fetch_installed_theme_names)
   puts "You've chosen #{chosen_theme_name}"
@@ -57,18 +65,12 @@ elsif ARGV.include?('-d') or ARGV.include?('--daemon')
   period = ARGV[idx+1].to_i # if it's nil, invalid the result will be 0
 
   if period.zero?
-    puts "Period specified is invalid. Setting to 5 minutes ..."
+    puts "Invalid or no period specified, Setting to 5 minutes ..."
     period = 5
   else
     puts "Changing icon theme per #{period} min. ..."
   end
-
-  icon_theme_names = fetch_installed_theme_names
-  icon_theme_names.each do |theme_name|
-    puts "Changing icon theme to #{theme_name} ..."
-    change_icon_theme(theme_name)
-    sleep period*60
-  end
+  run_in_daemon_mode(period, fetch_installed_theme_names)
 else
   puts "USAGE: icon_changer.rb -i (interactive mode)"
   puts " or    icon_changer -d, --daemon [period in minute] (run in daemon mode)"
